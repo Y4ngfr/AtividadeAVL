@@ -3,8 +3,6 @@
 #include "Arvore.h"
 #include "Nodo.h"
 
-// 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
-
 Nodo* novoNodoVazio()
 {
     Nodo* nodo = NULL;
@@ -84,6 +82,7 @@ void Nodo_imprimeOrdem(Nodo* nodo)
     Para cada sub-arvore, percorre para o nodo mais a esquerda
     possível, retorna imprimindo os valores, somente após isso
     avança para o nodo à direita e repete todo o processo
+    Imprime toda a árvore de forma que os valores fiquem ordenados
 */
     if(!Nodo_vazio(nodo)){
         Nodo_imprimeOrdem(nodo->esquerda);
@@ -98,6 +97,7 @@ void Nodo_imprimePosOrdem(Nodo* nodo)
     Percorre a árvore indo o mais a esquerda possível, em
     seguida o mais a direita possível e só após isso retorna
     imprimindo os valores.
+    Imprime todos os nodos filhos antes de imprimir o pai
 */
     if(!Nodo_vazio(nodo)){
         Nodo_imprimePosOrdem(nodo->esquerda);
@@ -105,7 +105,6 @@ void Nodo_imprimePosOrdem(Nodo* nodo)
         printf("%d ", nodo->valor);
     }
 }
-
 
 int Nodo_altura(Nodo* nodo)
 {
@@ -144,29 +143,22 @@ Nodo* Nodo_insere(Nodo* nodo, int valor)
     Entrada: Nodo* nodo (nodo raíz da árvore) int valor (valor que o novo nodo deve possuir)
     Saída: 1 caso o novo nodo tenha sido criado e inserido com sucesso e -1 caso falha
 */
-    if(Nodo_vazio(nodo))
-    {
-        nodo = novoNodo(valor, novoNodoVazio(), novoNodoVazio());
 
-        if(Nodo_vazio(nodo)){
-            return NULL;
-        }
-    }
-    else if(valor < nodo->valor)
-    {
-        nodo->esquerda = Nodo_insere(nodo->esquerda, valor);
-
-        if(Nodo_vazio(nodo)){
-            return NULL;
-        }
+    if(Nodo_vazio(nodo)){
+        return novoNodo(valor, novoNodoVazio(), novoNodoVazio());
     }
     else{
-        nodo->direita = Nodo_insere(nodo->direita, valor);
-
-        if(Nodo_vazio(nodo)){
-            return NULL;
+        if(valor <= nodo->valor){
+            nodo->esquerda = Nodo_insere(nodo->esquerda, valor);
+        }
+        else if(valor > nodo->valor){
+            nodo->direita = Nodo_insere(nodo->direita, valor);
         }
     }
+
+    nodo->altura = Nodo_altura(nodo);
+    nodo = calcularFb(nodo);
+    nodo = balancear(nodo);
 
     return nodo;
 }
@@ -176,10 +168,10 @@ Nodo* Nodo_retira(Nodo* nodo, int valor)
     if(Nodo_vazio(nodo)){
         return NULL;
     }
-    else if(nodo->valor > valor){
+    else if(valor < nodo->valor){
         nodo->esquerda = Nodo_retira(nodo->esquerda, valor);
     }
-    else if(nodo->valor < valor){
+    else if(valor > nodo->valor){
         nodo->direita = Nodo_retira(nodo->direita, valor);
     }
     else{ // Achou o elemento
@@ -187,19 +179,19 @@ Nodo* Nodo_retira(Nodo* nodo, int valor)
         if(Nodo_vazio(nodo->direita) && Nodo_vazio(nodo->esquerda))
         { // Elemento sem filhos
             free(nodo);
-            nodo = NULL;
+            return NULL;
         }
         else if(Nodo_vazio(nodo->esquerda))
         { // Só tem filho à direita
-            Nodo* aux = nodo;
-            nodo = nodo->direita;
-            free(aux);
+            Nodo* aux = nodo->direita;
+            free(nodo);
+            return aux;
         }
         else if(Nodo_vazio(nodo->direita))
         { // Só tem filho à esquerda
-            Nodo* aux = nodo;
-            nodo = nodo->esquerda;
-            free(aux);
+            Nodo* aux = nodo->esquerda;
+            free(nodo);
+            return aux;
         }
         else{
             // Tem os dois filhos
@@ -217,9 +209,12 @@ Nodo* Nodo_retira(Nodo* nodo, int valor)
             nodo->valor = aux->valor;
             aux->valor = valor;
             nodo->esquerda = Nodo_retira(nodo->esquerda, valor);
-
         }
     }
+
+    nodo->altura = Nodo_altura(nodo);
+    nodo = calcularFb(nodo);
+    nodo = balancear(nodo);
 
     return nodo;
 }
@@ -248,7 +243,7 @@ void graphviz (Nodo *nodo, FILE *fp) // Faz a recursao nos nodes imprimindo o co
     }
 }
 
-Nodo* Nodo_reotacaoEsquerda(Nodo* nodo)
+Nodo* Nodo_rotacaoEsquerda(Nodo* nodo)
 { // Balanceamento necessário quando a sub-árvore direita é maior
     Nodo *filho, *temp;
 
@@ -289,20 +284,67 @@ int fatorDeBalanceamento(Nodo *nodo)
     }
 }
 
-void Nodo_atualizarFB(Nodo* nodo)
+int profundidade(Nodo* nodo, int valor)
 {
-    if(!Nodo_vazio(nodo)){
-        Nodo_atualizarFB(nodo->esquerda);
-        Nodo_atualizarFB(nodo->direita);
-        nodo->fatorBalanceamento = Nodo_altura(nodo->direita) - Nodo_altura(nodo->esquerda);
+    int prof;
+
+    if(nodo == NULL){
+        prof = -1;
+        return prof;
+    }
+    else if(valor > nodo->valor){
+        prof = profundidade(nodo->direita, valor);
+        // se o valor da profundidade for -1 a recursão irá continuar retornando -1
+        // caso contrário irá incrementando a profundidade
+        return (prof < 0 ? prof : prof + 1);
+    }
+    else if(valor < nodo->valor){
+        prof = profundidade(nodo->esquerda, valor);
+
+        return (prof < 0 ? prof : prof + 1);
+    }
+    else if(valor == nodo->valor){
+        return 0;
     }
 }
 
-void Nodo_balancear(Nodo* nodo)
+Nodo* balancear(Nodo* nodo)
 {
-    if(nodo->fatorBalanceamento >= 2){
-        if(nodo->direita->fatorBalanceamento >= 0){
-            
+    if(nodo->fatorBalanceamento > 1)
+    {
+        if(nodo->esquerda->fatorBalanceamento >= 0){
+            nodo = Nodo_rotacaoDireita(nodo);
+        }
+        else if(nodo->esquerda->fatorBalanceamento < 0)
+        {
+            nodo->esquerda = Nodo_rotacaoEsquerda(nodo->esquerda);
+            nodo = Nodo_rotacaoDireita(nodo);
         }
     }
+    else if(nodo->fatorBalanceamento < -1)
+    {
+        if(nodo->direita->fatorBalanceamento <= 0)
+        {
+            nodo = Nodo_rotacaoEsquerda(nodo);
+        }
+        else if(nodo->direita->fatorBalanceamento > 0)
+        {
+            nodo->direita = Nodo_rotacaoDireita(nodo->direita);
+            nodo = Nodo_rotacaoEsquerda(nodo);
+        }
+    }
+
+    return nodo;
+}
+
+Nodo* calcularFb(Nodo* nodo)
+{
+    if(!Nodo_vazio(nodo))
+    {
+        calcularFb(nodo->esquerda);
+        nodo->fatorBalanceamento = Nodo_altura(nodo->esquerda) - Nodo_altura(nodo->direita);
+        calcularFb(nodo->direita);
+    }
+
+    return nodo;
 }

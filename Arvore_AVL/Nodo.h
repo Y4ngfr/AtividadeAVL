@@ -4,7 +4,7 @@
 struct nodo{
     int valor;
     int altura;
-    float fatorBalanceamento;
+    int fatorBalanceamento;
     struct nodo* esquerda;
     struct nodo* direita;
 };
@@ -28,16 +28,15 @@ int Nodo_altura(Nodo* nodo);
 Nodo* Nodo_busca(Nodo* nodo, int valor);
 Nodo* Nodo_insere(Nodo* nodo, int valor);
 Nodo* Nodo_retira(Nodo* nodo, int valor);
-Nodo* Nodo_reotacaoEsquerda(Nodo* nodo);
+Nodo* Nodo_rotacaoEsquerda(Nodo* nodo);
 Nodo* Nodo_rotacaoDireita(Nodo* nodo);
-
-void Nodo_atualizarFB(Nodo* nodo);
-void Nodo_balancear(Nodo* nodo);
+int profundidade(Nodo* nodo, int valor);
+Nodo* balancear(Nodo* nodo);
+Nodo* calcularFb(Nodo* nodo);
 
 // Utilidades
 void graphviz (Nodo *nodo, FILE* fp);
 int max(int v1, int v2);
 int fatorDeBalanceamento(Nodo *nodo);
-
 
 #endif
